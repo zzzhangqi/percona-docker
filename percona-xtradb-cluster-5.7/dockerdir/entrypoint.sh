@@ -1,7 +1,10 @@
 #!/bin/bash
 set -eo pipefail
 shopt -s nullglob
-set -o xtrace
+
+if [ "${DEBUG}" = "true" ]; then
+    set -o xtrace
+fi
 
 # if command starts with an option, prepend mysqld
 if [ "${1:0:1}" = '-' ]; then
@@ -352,6 +355,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		if [ -n "$seqno" ] && [ "$seqno" -ne -1 ]; then
 			echo "Skipping wsrep-recover for $uuid:$seqno pair"
 			echo "Assigning $uuid:$seqno to wsrep_start_position"
+			# zq
+			sh /rainbond.sh
 			wsrep_start_position_opt="--wsrep_start_position=$uuid:$seqno"
 		fi
 	fi
@@ -366,6 +371,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 					| sed 's/.*\ Recovered\ position://' \
 					| sed 's/^[ \t]*//'
 			)"
+			# zq
+			seqno_nu="${start_pos##*:}"
+			sh /rainbond.sh
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"
 		else
 			# The server prints "..skipping position recovery.." if started without wsrep.

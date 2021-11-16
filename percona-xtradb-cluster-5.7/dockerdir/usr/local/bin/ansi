@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ "$1" = "info" ]; then
+    echo -e "\033[32mINFO:\033[0m" "\033[32m$2\033[0m"
+elif [ "$1" = "error" ]; then
+    echo -e "\033[31mERROR:\033[0m" "\033[31m$2\033[0m"
+elif [ "$1" = "warn" ]; then
+    echo -e "\033[33mWARN:\033[0m" "\033[33m$2\033[0m"
+else
+    echo -e "\033[31mERROR:Please pass the parameters\033[0m"
+fi
