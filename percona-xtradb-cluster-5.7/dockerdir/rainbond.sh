@@ -29,7 +29,6 @@ while true; do
     fi
 
     NODE_IP=$(hostname -I | awk ' { print $1 } ')
-    SeqnoCheck
     if [ "$seqno" -eq -1 ]; then
         curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
         seqno_value=$seqno_nu
