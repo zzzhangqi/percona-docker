@@ -21,15 +21,15 @@ while true; do
             break
         fi
     fi
-
+    
     count=$(get_synced_count | awk '{print NF}')
-    if [ "$count" -ne 0 ]; then
+    if (( "$count" == 0 )) ; then
         ansi success "There are healthy nodes in the cluster, which are about to join the cluster automatically."
         break
     fi
 
     NODE_IP=$(hostname -I | awk ' { print $1 } ')
-    if [ "$seqno" -eq -1 ]; then
+    if (( "$seqno" == -1 )); then
         curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
         seqno_value=$seqno_nu
     else
