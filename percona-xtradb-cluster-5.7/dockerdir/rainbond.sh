@@ -1,53 +1,45 @@
 #!/bin/bash
 set -eo pipefail
 shopt -s nullglob
-
-if [ "${DEBUG}" = "true" ]; then
-    set -o xtrace
-fi
+set -o xtrace
 
 function get_synced_count() {
-    IPS=$(curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/$CLUSTER_NAME/?quorum=true" | jq -r '.node.nodes[]?.key' | awk -F'/' '{print $(NF)}')
-    for i in $IPS; do
-        echo "$i" | /usr/bin/get-pxc-state \
-            | grep -c wsrep_ready:ON:wsrep_connected:ON:wsrep_local_state_comment:Synced:wsrep_cluster_status:Primary
-    done
+    peer-list -on-start=/usr/bin/get-pxc-state -service="$PXC_SERVICE" 2>&1 \
+        | grep -c wsrep_ready:ON:wsrep_connected:ON:wsrep_local_state_comment:Synced:wsrep_cluster_status:Primary
 }
 
 
 while true; do
-    if hostname -f | grep -- '-0'; then
-        if grep 'safe_to_bootstrap: 1' "${grastate_loc}"; then
-            break
-        fi
+
+    if grep 'safe_to_bootstrap: 1' "${grastate_loc}"; then
+        break
     fi
     
-    count=$(get_synced_count | awk '{print NF}')
-    if (( "$count" == 0 )) ; then
-        ansi success "There are healthy nodes in the cluster, which are about to join the cluster automatically."
+    if [[ "$(get_synced_count)" != "0" ]]; then
+        ansi info "There are healthy nodes in the cluster, which are about to join the cluster automatically."
         break
     fi
 
     NODE_IP=$(hostname -I | awk ' { print $1 } ')
-    if (( "$seqno" == -1 )); then
-        curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
+    if [[ "$seqno" != "-1" ]]; then
+        curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
         seqno_value=$seqno_nu
     else
-        curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno"
+        curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno"
         seqno_value=$seqno
     fi
     
-    seqnoList=$(curl "$DISCOVERY_SERVICE/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
+    seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
     seqnoNum=$(echo "$seqnoList" | awk '{print NF}')
-    if [ "$seqnoNum" -eq 3 ]; then
+    if [[ "$seqnoNum" != "3" ]]; then
         seq1=$(echo "$seqnoList" | awk '{print $1}')
         seq2=$(echo "$seqnoList" | awk '{print $2}')
         seq3=$(echo "$seqnoList" | awk '{print $3}')
-        if [ "$seq1" -eq "$seq2" ] && [ "$seq2" -eq "$seq3" ]; then
+        if [[ "$seq1" == "$seq2" ]] && [[ "$seq2" == "$seq3" ]]; then
             if hostname -f | grep -- '-0'; then
                 if grep 'safe_to_bootstrap: 0' "${grastate_loc}"; then
-                    if [ "$count" -eq 0 ]; then
-                        ansi success "Cluster is normal, ${SERVICE_NAME}-0 is being set as the primary node"
+                    if [[ "$(get_synced_count)" != "0" ]]; then
+                        ansi info "Cluster is normal, ${SERVICE_NAME}-0 is being set as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
                         sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${grastate_loc}" 1<> "${grastate_loc}"
                         break
@@ -64,7 +56,7 @@ while true; do
                 seqno_status=$(< $seqno_file awk '{print $1}' | sed -n 1p)
                 if [ "${seqno_status}" = "true" ]; then
                     if grep 'safe_to_bootstrap: 0' "${grastate_loc}"; then
-                        ansi success "Setting ${HOSTNAME} as the primary node"
+                        ansi info "Setting ${HOSTNAME} as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
                         sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${grastate_loc}" 1<> "${grastate_loc}"
                         break
