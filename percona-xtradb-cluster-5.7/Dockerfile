@@ -130,7 +130,7 @@ RUN if [[ -n $DEBUG ]] ; then \
 		rm -rf /var/cache/dnf; \
 	fi
 
-# USER 1001
+USER 1001
 
 VOLUME ["/var/lib/mysql", "/var/log/mysql"]
 
