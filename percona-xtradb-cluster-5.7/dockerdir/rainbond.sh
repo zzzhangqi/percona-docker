@@ -31,7 +31,7 @@ while true; do
         if [[ "$(echo "$seqnoList" | cut -f 1-)" == "$(echo "$seqnoList" | cut -f 2-)" ]] && [[ "$(echo "$seqnoList" | cut -f 2-)" == "$(echo "$seqnoList" | cut -f 3-)" ]]; then
             if hostname -f | grep -- '-0'; then
                 if grep 'safe_to_bootstrap: 0' "${GRA}"; then
-                    if [[ "$(get_synced_count)" != "0" ]]; then
+                    if [[ "$(get_synced_count)" = "0" ]]; then
                         ansi info "Cluster is normal, ${SERVICE_NAME}-0 is being set as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
                         sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
