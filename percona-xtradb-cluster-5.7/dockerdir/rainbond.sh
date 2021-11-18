@@ -47,11 +47,7 @@ while true; do
                 fi
             fi
         else
-            seqno_file="/seqnovalue"
-            if [ ! -f "$seqno_file" ]; then
-                touch $seqno_file
-            fi
-
+            seqno_file="/usr/local/bin/seqnovalue"
             if [ -s "$seqno_file" ]; then
                 seqno_status=$(< $seqno_file awk '{print $1}' | sed -n 1p)
                 if [ "${seqno_status}" = "true" ]; then
