@@ -355,7 +355,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		if [ -n "$seqno" ] && [ "$seqno" -ne -1 ]; then
 			echo "Skipping wsrep-recover for $uuid:$seqno pair"
 			echo "Assigning $uuid:$seqno to wsrep_start_position"
-			# zq
+			# zq revised it in 2021-11-18
+			echo "$seqno" > "/usr/local/bin/seqno-value"
 			sh /rainbond.sh
 			wsrep_start_position_opt="--wsrep_start_position=$uuid:$seqno"
 		fi
@@ -371,8 +372,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 					| sed 's/.*\ Recovered\ position://' \
 					| sed 's/^[ \t]*//'
 			)"
-			# zq
+			# zq revised it in 2021-11-18
 			seqno_nu="${start_pos##*:}"
+			echo "$seqno_nu" > "/usr/local/bin/seqno-value"
 			sh /rainbond.sh
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"
 		else

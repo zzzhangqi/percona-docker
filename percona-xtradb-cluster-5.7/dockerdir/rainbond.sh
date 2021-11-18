@@ -1,4 +1,9 @@
 #!/bin/bash
+
+##############################################
+#### Used to support scripts written by rainbond,zq revised it in 2021-11-18
+##############################################
+
 set -eo pipefail
 shopt -s nullglob
 set -o xtrace
@@ -20,14 +25,12 @@ while true; do
         break
     fi
 
+    seqno_value_file="/usr/local/bin/seqno-value"
+    seqno_value=$(< $seqno_value_file awk '{print $1}' | sed -n 1p)
+
     NODE_IP=$(hostname -I | awk ' { print $1 } ')
-    if [[ "$seqno" != "-1" ]]; then
-        curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
-        seqno_value=$seqno_nu
-    else
-        curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno"
-        seqno_value=$seqno
-    fi
+    curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_value"
+    
     
     seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
     seqnoNum=$(echo "$seqnoList" | awk '{print NF}')
@@ -47,10 +50,9 @@ while true; do
                 fi
             fi
         else
-            seqno_file="/usr/local/bin/seqnovalue"
+            seqno_file="/usr/local/bin/seqno_status"
             if [ -s "$seqno_file" ]; then
-                seqno_status=$(< $seqno_file awk '{print $1}' | sed -n 1p)
-                if [ "${seqno_status}" = "true" ]; then
+                if grep 'true' "$seqno_file"; then
                     if grep 'safe_to_bootstrap: 0' "${GRA}"; then
                         ansi info "Setting ${HOSTNAME} as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
