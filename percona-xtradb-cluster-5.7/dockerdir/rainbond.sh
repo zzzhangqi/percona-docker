@@ -26,11 +26,11 @@ while true; do
     fi
     
     seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
-    seqnoNum=$(echo "$seqnoList" | awk '{print NF}')
-    if [[ "$seqnoNum" != "3" ]]; then
-        seq1=$(echo "$seqnoList" | awk '{print $1}')
-        seq2=$(echo "$seqnoList" | awk '{print $2}')
-        seq3=$(echo "$seqnoList" | awk '{print $3}')
+    seqnoNum=$(echo "$seqnoList" | wc -l)
+    if (( "$seqnoNum" == 3 )); then
+        seq1=$("$seqnoList" | awk '{print $1}')
+        seq2=$("$seqnoList" | awk '{print $2}')
+        seq3=$("$seqnoList" | awk '{print $3}')
         if [[ "$seq1" == "$seq2" ]] && [[ "$seq2" == "$seq3" ]]; then
             if hostname -f | grep -- '-0'; then
                 if grep 'safe_to_bootstrap: 0' "${GRA}"; then
@@ -57,11 +57,11 @@ while true; do
                 NODE_IP=$(hostname -I | awk ' { print $1 } ')
                 seqno_value=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP?recursive=true" | jq -r '.node.value')
 
-                ansi error "You have the situation of a full PXC cluster crash. In order to restore your PXC cluster, please check the log
-                   from all pods/nodes to find the node with the most recent data (the one with the highest sequence number (seqno).
-                   It is ${HOSTNAME} node with sequence number (seqno): $seqno_value
-                   If you want to recover from this node you need to execute the following command:
-                   curl 'http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP' -XPUT -d value='true' -d ttl=60"
+                ansi error "You have the situation of a full PXC cluster crash. In order to restore your PXC cluster, please check the log \
+                from all pods/nodes to find the node with the most recent data (the one with the highest sequence number (seqno). \
+                It is ${HOSTNAME} node with sequence number (seqno): $seqno_value \
+                If you want to recover from this node you need to execute the following command: \
+                curl 'http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP' -XPUT -d value='true' -d ttl=60"
             fi
         fi
     else
