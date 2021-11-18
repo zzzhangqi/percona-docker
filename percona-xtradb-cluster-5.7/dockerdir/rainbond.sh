@@ -24,13 +24,6 @@ while true; do
         ansi info "There are healthy nodes in the cluster, which are about to join the cluster automatically."
         break
     fi
-
-    seqno_value_file="/usr/local/bin/seqno-value"
-    seqno_value=$(< $seqno_value_file awk '{print $1}' | sed -n 1p)
-
-    NODE_IP=$(hostname -I | awk ' { print $1 } ')
-    curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_value"
-    
     
     seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
     seqnoNum=$(echo "$seqnoList" | awk '{print NF}')
@@ -50,24 +43,25 @@ while true; do
                 fi
             fi
         else
-            seqno_file="/usr/local/bin/seqno_status"
-            if [ -s "$seqno_file" ]; then
-                if grep 'true' "$seqno_file"; then
-                    if grep 'safe_to_bootstrap: 0' "${GRA}"; then
-                        ansi info "Setting ${HOSTNAME} as the primary node"
-                        mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
-                        sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
-                        break
-                    fi
-                else
-                    ansi error "The file content of $seqno_file is incorrect. It should be true."
-                fi 
+            NODE_IP=$(hostname -I | awk ' { print $1 } ')
+            seqno_value_status=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP?recursive=true" | jq -r '.node.value')
+            
+            if [[ "${seqno_value_status}" == "true" ]]; then
+                if grep 'safe_to_bootstrap: 0' "${GRA}"; then
+                    ansi info "Setting ${HOSTNAME} as the primary node"
+                    mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
+                    sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
+                    break
+                fi
             else
+                NODE_IP=$(hostname -I | awk ' { print $1 } ')
+                seqno_value=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP?recursive=true" | jq -r '.node.value')
+
                 ansi error "You have the situation of a full PXC cluster crash. In order to restore your PXC cluster, please check the log
                    from all pods/nodes to find the node with the most recent data (the one with the highest sequence number (seqno).
                    It is ${HOSTNAME} node with sequence number (seqno): $seqno_value
                    If you want to recover from this node you need to execute the following command:
-                   echo 'true' > /seqnovalue"
+                   curl 'http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP' -XPUT -d value='true' -d ttl=60"
             fi
         fi
     else

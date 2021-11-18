@@ -344,6 +344,8 @@ wsrep_start_position_opt=""
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	DATADIR="$(_get_config 'datadir' "$@")"
 	grastate_loc="${DATADIR}/grastate.dat"
+	# zq revised it in 2021-11-18
+	NODE_IP=$(hostname -I | awk ' { print $1 } ')
 
 	if [ -s "$grastate_loc" -a -d "$DATADIR/mysql" ]; then
 		uuid=$(grep 'uuid:' "$grastate_loc" | cut -d: -f2 | tr -d ' ' || :)
@@ -355,9 +357,11 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		if [ -n "$seqno" ] && [ "$seqno" -ne -1 ]; then
 			echo "Skipping wsrep-recover for $uuid:$seqno pair"
 			echo "Assigning $uuid:$seqno to wsrep_start_position"
+
 			# zq revised it in 2021-11-18
-			echo "$seqno" > "/usr/local/bin/seqno-value"
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno"
 			sh /rainbond.sh
+
 			wsrep_start_position_opt="--wsrep_start_position=$uuid:$seqno"
 		fi
 	fi
@@ -372,10 +376,12 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 					| sed 's/.*\ Recovered\ position://' \
 					| sed 's/^[ \t]*//'
 			)"
+
 			# zq revised it in 2021-11-18
 			seqno_nu="${start_pos##*:}"
-			echo "$seqno_nu" > "/usr/local/bin/seqno-value"
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
 			sh /rainbond.sh
+			
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"
 		else
 			# The server prints "..skipping position recovery.." if started without wsrep.
