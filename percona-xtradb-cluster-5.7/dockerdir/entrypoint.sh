@@ -359,8 +359,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			echo "Assigning $uuid:$seqno to wsrep_start_position"
 
 			# zq revised it in 2021-11-18
-			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno"
-			sh /rainbond.sh
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno" -d ttl=60
+			. /rainbond.sh
 
 			wsrep_start_position_opt="--wsrep_start_position=$uuid:$seqno"
 		fi
@@ -379,9 +379,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 			# zq revised it in 2021-11-18
 			seqno_nu="${start_pos##*:}"
-			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu"
-			sh /rainbond.sh
-			
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu" -d ttl=60
+			. /rainbond.sh
+
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"
 		else
 			# The server prints "..skipping position recovery.." if started without wsrep.
