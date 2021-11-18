@@ -28,10 +28,7 @@ while true; do
     seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
     seqnoNum=$(echo "$seqnoList" | wc -l)
     if (( "$seqnoNum" == 3 )); then
-        seq1=$("$seqnoList" | awk '{print $1}')
-        seq2=$("$seqnoList" | awk '{print $2}')
-        seq3=$("$seqnoList" | awk '{print $3}')
-        if [[ "$seq1" == "$seq2" ]] && [[ "$seq2" == "$seq3" ]]; then
+        if [[ "$(echo "$seqnoList" | cut -f 1-)" == "$(echo "$seqnoList" | cut -f 2-)" ]] && [[ "$(echo "$seqnoList" | cut -f 2-)" == "$(echo "$seqnoList" | cut -f 3-)" ]]; then
             if hostname -f | grep -- '-0'; then
                 if grep 'safe_to_bootstrap: 0' "${GRA}"; then
                     if [[ "$(get_synced_count)" != "0" ]]; then
