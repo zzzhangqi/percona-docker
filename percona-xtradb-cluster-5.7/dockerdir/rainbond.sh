@@ -10,8 +10,8 @@ function get_synced_count() {
 
 
 while true; do
-
-    if grep 'safe_to_bootstrap: 1' "${grastate_loc}"; then
+    GRA=/var/lib/mysql/grastate.dat
+    if grep 'safe_to_bootstrap: 1' "${GRA}"; then
         break
     fi
     
@@ -37,11 +37,11 @@ while true; do
         seq3=$(echo "$seqnoList" | awk '{print $3}')
         if [[ "$seq1" == "$seq2" ]] && [[ "$seq2" == "$seq3" ]]; then
             if hostname -f | grep -- '-0'; then
-                if grep 'safe_to_bootstrap: 0' "${grastate_loc}"; then
+                if grep 'safe_to_bootstrap: 0' "${GRA}"; then
                     if [[ "$(get_synced_count)" != "0" ]]; then
                         ansi info "Cluster is normal, ${SERVICE_NAME}-0 is being set as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
-                        sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${grastate_loc}" 1<> "${grastate_loc}"
+                        sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
                         break
                     fi
                 fi
@@ -51,10 +51,10 @@ while true; do
             if [ -s "$seqno_file" ]; then
                 seqno_status=$(< $seqno_file awk '{print $1}' | sed -n 1p)
                 if [ "${seqno_status}" = "true" ]; then
-                    if grep 'safe_to_bootstrap: 0' "${grastate_loc}"; then
+                    if grep 'safe_to_bootstrap: 0' "${GRA}"; then
                         ansi info "Setting ${HOSTNAME} as the primary node"
                         mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
-                        sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${grastate_loc}" 1<> "${grastate_loc}"
+                        sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
                         break
                     fi
                 else
