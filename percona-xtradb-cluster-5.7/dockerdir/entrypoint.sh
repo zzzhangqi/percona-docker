@@ -337,6 +337,16 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	grep -v wsrep_sst_auth "$CFG"
 fi
 
+# zq revised it in 2021-11-19
+# Solve the problem of starting too fast on the rainbond.
+if [[ "${HOSTNAME}" == "${SERVICE_NAME}-1" ]]; then
+	ansi warn "Solve the problem of starting too fast on the rainbond,Pause for 10 seconds."
+	sleep 10
+elif [[ "${HOSTNAME}" == "${SERVICE_NAME}-2" ]]; then
+	ansi warn "Solve the problem of starting too fast on the rainbond,Pause for 20 seconds."
+	sleep 20
+fi
+
 wsrep_start_position_opt=""
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	DATADIR="$(_get_config 'datadir' "$@")"
