@@ -1,10 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 shopt -s nullglob
-
-if [ "${DEBUG}" = "true" ]; then
-    set -o xtrace
-fi
+set -o xtrace
 
 # if command starts with an option, prepend mysqld
 if [ "${1:0:1}" = '-' ]; then
@@ -359,7 +356,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			echo "Assigning $uuid:$seqno to wsrep_start_position"
 
 			# zq revised it in 2021-11-18
-			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno" -d ttl=60
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno" -d ttl=120
 			. /rainbond.sh
 
 			wsrep_start_position_opt="--wsrep_start_position=$uuid:$seqno"
@@ -379,7 +376,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 			# zq revised it in 2021-11-18
 			seqno_nu="${start_pos##*:}"
-			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu" -d ttl=60
+			curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP" -XPUT -d value="$seqno_nu" -d ttl=120
 			. /rainbond.sh
 
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"

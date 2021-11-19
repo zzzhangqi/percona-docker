@@ -25,6 +25,18 @@ while true; do
         break
     fi
     
+    NODE_IP=$(hostname -I | awk ' { print $1 } ')
+    seqno_value_status=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP?recursive=true" | jq -r '.node.value')
+    
+    if [[ "${seqno_value_status}" == "true" ]]; then
+        if grep 'safe_to_bootstrap: 0' "${GRA}"; then
+            ansi info "Setting ${HOSTNAME} as the primary node"
+            mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
+            sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
+            break
+        fi
+    fi
+
     seqnoList=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/?recursive=true" | jq -r '.node.nodes[]?.value')
     seqnoNum=$(echo "$seqnoList" | wc -l)
     if (( "$seqnoNum" == 3 )); then
@@ -40,26 +52,13 @@ while true; do
                 fi
             fi
         else
-            NODE_IP=$(hostname -I | awk ' { print $1 } ')
-            seqno_value_status=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP?recursive=true" | jq -r '.node.value')
-            
-            if [[ "${seqno_value_status}" == "true" ]]; then
-                if grep 'safe_to_bootstrap: 0' "${GRA}"; then
-                    ansi info "Setting ${HOSTNAME} as the primary node"
-                    mysqld --wsrep-recover --tc-heuristic-recover=COMMIT
-                    sed "s^safe_to_bootstrap: 0^safe_to_bootstrap: 1^" "${GRA}" 1<> "${GRA}"
-                    break
-                fi
-            else
-                NODE_IP=$(hostname -I | awk ' { print $1 } ')
-                seqno_value=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP?recursive=true" | jq -r '.node.value')
+            seqno_value=$(curl "http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno/$NODE_IP?recursive=true" | jq -r '.node.value')
 
-                ansi error "You have the situation of a full PXC cluster crash. In order to restore your PXC cluster, please check the log \
-                from all pods/nodes to find the node with the most recent data (the one with the highest sequence number (seqno). \
-                It is ${HOSTNAME} node with sequence number (seqno): $seqno_value \
-                If you want to recover from this node you need to execute the following command: \
-                curl 'http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP' -XPUT -d value='true' -d ttl=60"
-            fi
+            ansi error "You have the situation of a full PXC cluster crash. In order to restore your PXC cluster, please check the log \
+            from all pods/nodes to find the node with the most recent data (the one with the highest sequence number (seqno). \
+            It is ${HOSTNAME} node with sequence number (seqno): $seqno_value \
+            If you want to recover from this node you need to execute the following command: \
+            curl 'http://$ETCD_HOST:$ETCD_PORT/v2/keys/pxc-cluster/pxc-seqno-status/$NODE_IP' -XPUT -d value='true' -d ttl=60"
         fi
     else
         ansi error "Wait for the pxc node to be ready"
