@@ -308,14 +308,17 @@ else
 		peer-list -on-start=/usr/bin/get-pxc-state -service="$SERVICE_NAME" 2>&1 \
 			| grep -c wsrep_ready:ON:wsrep_connected:ON:wsrep_local_state_comment:Synced:wsrep_cluster_status:Primary
 	}
-	if [ ! -d "$DATADIR/mysql" ]; then
-		while true; do
-			if [[ "$(get_synced_count)" != "0" ]]; then
-				ansi info "There are healthy nodes in the cluster, which are about to join the cluster automatically."
-				break
-			fi
-		done
-	fi
+	
+	while true; do
+		if [ ! -d "$DATADIR/mysql" ]; then
+			ansi info "The node already exists in the $DATADIR/mysql directory,It's not the first time it's started."
+			break
+		fi
+		if [[ "$(get_synced_count)" != "0" ]]; then
+			ansi info "There are healthy nodes in the cluster, which are about to join the cluster automatically."
+			break
+		fi
+	done
 fi
 
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
