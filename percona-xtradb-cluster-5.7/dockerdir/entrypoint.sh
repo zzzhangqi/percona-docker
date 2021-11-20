@@ -310,6 +310,7 @@ else
 	}
 	
 	while true; do
+		sleep 20m
 		if [ ! -d "$DATADIR/mysql" ]; then
 			ansi info "The node already exists in the $DATADIR/mysql directory,It's not the first time it's started."
 			break
