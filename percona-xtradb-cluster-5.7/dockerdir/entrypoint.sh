@@ -311,7 +311,7 @@ else
 	
 	while true; do
 		DATADIR="$(_get_config 'datadir' "$@")"
-		if [ ! -d "$DATADIR/mysql" ]; then
+		if [ -d "$DATADIR/mysql" ]; then
 			ansi info "The node already exists in the $DATADIR/mysql directory,It's not the first time it's started."
 			break
 		fi
