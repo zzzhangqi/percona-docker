@@ -300,6 +300,20 @@ if [ -z "$CLUSTER_JOIN" ] && [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		echo 'Initialization complete, now exiting!'
 		exit 0
 	fi
+
+else
+	# zq revised it in 2021-11-19
+	# Solve the problem of starting too fast on the rainbond.
+	function get_synced_count() {
+		peer-list -on-start=/usr/bin/get-pxc-state -service="$SERVICE_NAME" 2>&1 \
+			| grep -c wsrep_ready:ON:wsrep_connected:ON:wsrep_local_state_comment:Synced:wsrep_cluster_status:Primary
+	}
+	while true; do
+		if [[ "$(get_synced_count)" != "0" ]]; then
+			ansi info "There are healthy nodes in the cluster, which are about to join the cluster automatically."
+			break
+    	fi
+	done
 fi
 
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
@@ -337,15 +351,6 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 	grep -v wsrep_sst_auth "$CFG"
 fi
 
-# zq revised it in 2021-11-19
-# Solve the problem of starting too fast on the rainbond.
-if [[ "${HOSTNAME}" == "${SERVICE_NAME}-1" ]]; then
-	ansi warn "Solve the problem of starting too fast on the rainbond,Pause for 10 seconds."
-	sleep 10
-elif [[ "${HOSTNAME}" == "${SERVICE_NAME}-2" ]]; then
-	ansi warn "Solve the problem of starting too fast on the rainbond,Pause for 20 seconds."
-	sleep 20
-fi
 
 wsrep_start_position_opt=""
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
